@@ -13,7 +13,7 @@
     "require": {
         "php": ">=7.0",
         "guzzlehttp/guzzle": "~6.0",
-        "illuminate/support": "~5.4|^6.*",
+        "illuminate/support": "~5.4|~6.x-dev",
         "symfony/cache": "~3.3"
     },
     "require-dev": {
@@ -25,5 +25,4 @@
             "Linx\\RemoteConfigClient\\": "src/"
         }
     }
-
 }
