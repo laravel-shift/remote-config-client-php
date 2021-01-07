@@ -4,6 +4,7 @@ namespace Linx\RemoteConfigClient;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Cache;
+use Laravel\Lumen\Application;
 
 class RemoteConfigServiceProvider extends ServiceProvider
 {
@@ -11,7 +12,7 @@ class RemoteConfigServiceProvider extends ServiceProvider
     {
         $source = dirname(__DIR__).'/config/remote-config.php';
 
-        if ($this->app instanceof LumenApplication) {
+        if ($this->app instanceof Application) {
             $this->app->configure('remote-config');
         }
 
