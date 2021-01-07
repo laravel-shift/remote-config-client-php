@@ -8,10 +8,8 @@ use Laravel\Lumen\Application;
 
 class RemoteConfigServiceProvider extends ServiceProvider
 {
-    public function __construct($app)
+    public function boot()
     {
-        parent::__construct($app);
-
         $source = dirname(__DIR__).'/config/remote-config.php';
 
         if ($this->app instanceof Application) {
