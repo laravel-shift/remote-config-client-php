@@ -62,17 +62,18 @@ class RemoteConfig
             }
             $hasCache = $cache->has($cacheKey);
             $canAcessRedis = true;
-        } catch (\Exception $th) {}
+        } catch (\Exception $th) {
+        }
 
         if ($hasCache) {
             $data = $cache->get($cacheKey);
 
-            if(!$this->cacheFallback()->has($cacheKey)) {
+            if (!$this->cacheFallback()->has($cacheKey)) {
                 $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
             }
         } else {
             $data = $this->httpGet($uri);
-            if($canAcessRedis) {
+            if ($canAcessRedis) {
                 $cache->set($cacheKey, $data, $this->cacheLifeTime);
             }
         }
@@ -106,16 +107,15 @@ class RemoteConfig
             );
             $cache->set($cacheKey, json_decode($response->getBody(), true), self::RC_CACHE_FALLBACK_TTL);
         } catch (ConnectException $e) {
+
+            if (empty($currentCache)) {
+                throw $e;
+            }
+
             $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
         }
 
-        $data = $cache->get($cacheKey);
-
-        if(!$data) {
-            throw new \Exception("Connection error on: '{$this->host}{$path}'");
-        }
-
-        return $data;
+        return $cache->get($cacheKey);
     }
 
     private function cacheFallback()
