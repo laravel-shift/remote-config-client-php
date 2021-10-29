@@ -2,6 +2,7 @@
 
 namespace Linx\RemoteConfigClient;
 
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Lumen\Application;
@@ -16,6 +17,11 @@ class RemoteConfigServiceProvider extends ServiceProvider
             $config = $app->make('config')->get('remote-config');
             $remoteConfig = new RemoteConfig($config);
             $remoteConfig->setCache(Cache::getFacadeRoot()->store());
+
+            $loggerClass = $config['logger-class'] ?? null;
+            if ($loggerClass && $app->make($loggerClass) instanceof Log) {
+                $remoteConfig->setLoggerClass($loggerClass);
+            }
 
             return $remoteConfig;
         });

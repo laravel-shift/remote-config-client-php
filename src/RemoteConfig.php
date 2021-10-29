@@ -36,6 +36,9 @@ class RemoteConfig
 
     private $cacheFallback;
 
+    /** @var string|null $loggerClass */
+    private $loggerClass;
+
     public function __construct(array $credentials)
     {
         $this->host = $this->addScheme($credentials['host']);
@@ -46,6 +49,15 @@ class RemoteConfig
         $this->cacheLifeTime = $credentials['cache-life-time'] ?? self::CACHE_TTL;
         $this->cacheDirectory = $credentials['cache-directory'] ?? null;
         $this->cacheFallbackDirectory = $credentials['cache-fallback-directory'] ?? null;
+    }
+
+    private function logError(string $message, array $data = [])
+    {
+        if (!$this->loggerClass) {
+            return;
+        }
+        $class = $this->loggerClass;
+        $class::error($message, $data);
     }
 
     public function getClientConfig(string $client, string $config = null)
@@ -63,6 +75,11 @@ class RemoteConfig
             $hasCache = $cache->has($cacheKey);
             $canAcessRedis = true;
         } catch (\Exception $th) {
+            $this->logError('Could not open cache from Redis', [
+                'client' => $client,
+                'error_message' => $th->getMessage(),
+                'uri' => $uri,
+            ]);
         }
 
         if ($hasCache) {
@@ -107,7 +124,12 @@ class RemoteConfig
             );
             $cache->set($cacheKey, json_decode($response->getBody(), true), self::RC_CACHE_FALLBACK_TTL);
         } catch (ConnectException $e) {
-
+            $this->logError('Could not get data from Remote Config API', [
+                'current_cache' => $currentCache,
+                'error_message' => $e->getMessage(),
+                'path' => $path,
+                'timeout' => $timeout,
+            ]);
             if (empty($currentCache)) {
                 throw $e;
             }
@@ -161,6 +183,11 @@ class RemoteConfig
     public function setCache(CacheInterface $cache)
     {
         $this->cache = $cache;
+    }
+
+    public function setLoggerClass(string $loggerClass)
+    {
+        $this->loggerClass = $loggerClass;
     }
 
     public function updateCacheData(string $client, array $data, bool $canExpire = true)
