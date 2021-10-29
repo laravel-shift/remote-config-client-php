@@ -7,4 +7,5 @@ return [
     'environment' => env('REMOTE_CONFIG_ENVIRONMENT', env('APP_ENV')),
     'cache-life-time' => env('REMOTE_CONFIG_CACHE_LIFE_TIME', 3600),
     'cache-directory' => env('REMOTE_CONFIG_CACHE_DIRECTORY'),
+    'logger-class' => env('REMOTE_CONFIG_LOGGER_CLASS', ''),
 ];
