@@ -3,6 +3,7 @@
 namespace Linx\RemoteConfigClient;
 
 use GuzzleHttp\Client;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Simple\FilesystemCache;
 use Psr\SimpleCache\CacheInterface;
 use GuzzleHttp\Exception\ConnectException;
@@ -187,10 +188,7 @@ class RemoteConfig
 
     public function setLoggerClass(string $loggerClass)
     {
-        if (!class_exists($loggerClass)) {
-            return;
-        }
-        if (!method_exists($loggerClass, 'error')) {
+        if ($loggerClass instanceof LoggerInterface) {
             return;
         }
         $this->loggerClass = $loggerClass;
