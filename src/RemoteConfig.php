@@ -187,6 +187,12 @@ class RemoteConfig
 
     public function setLoggerClass(string $loggerClass)
     {
+        if (!class_exists($loggerClass)) {
+            return;
+        }
+        if (!method_exists($loggerClass, 'error')) {
+            return;
+        }
         $this->loggerClass = $loggerClass;
     }
 
