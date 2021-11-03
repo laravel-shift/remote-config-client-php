@@ -18,10 +18,8 @@ class RemoteConfigServiceProvider extends ServiceProvider
             $remoteConfig = new RemoteConfig($config);
             $remoteConfig->setCache(Cache::getFacadeRoot()->store());
 
-            $loggerClass = $config['logger-class'] ?? null;
-            if ($loggerClass && $app->make($loggerClass) instanceof Log) {
-                $remoteConfig->setLoggerClass($loggerClass);
-            }
+            $loggerClass = $config['logger-class'] ?? '';
+            $remoteConfig->setLoggerClass($loggerClass);
 
             return $remoteConfig;
         });
