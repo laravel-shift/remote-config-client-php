@@ -123,7 +123,9 @@ class RemoteConfig
                     'timeout' => $timeout,
                 ]
             );
-            $cache->set($cacheKey, json_decode($response->getBody(), true), self::RC_CACHE_FALLBACK_TTL);
+
+            $currentCache = json_decode($response->getBody(), true);
+            $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
         } catch (ConnectException $e) {
             $this->logError('Could not get data from Remote Config API', [
                 'current_cache' => $currentCache,
@@ -138,7 +140,7 @@ class RemoteConfig
             $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
         }
 
-        return $cache->get($cacheKey);
+        return $currentCache;
     }
 
     private function cacheFallback()
