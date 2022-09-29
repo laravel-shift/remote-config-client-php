@@ -5,8 +5,10 @@ namespace Linx\RemoteConfigClient;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Simple\FilesystemCache;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Psr\SimpleCache\CacheInterface;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Arr;
 
 class RemoteConfig
@@ -90,9 +92,15 @@ class RemoteConfig
                 $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
             }
         } else {
-            $data = $this->httpGet($uri);
-            if ($canAcessRedis) {
-                $cache->set($cacheKey, $data, $this->cacheLifeTime);
+
+            try {
+                $data = $this->httpGet($uri);
+
+                if ($canAcessRedis) {
+                    $cache->set($cacheKey, $data, $this->cacheLifeTime);
+                }
+            } catch (HttpException $th) {
+                throw $th;
             }
         }
 
@@ -138,6 +146,18 @@ class RemoteConfig
             }
 
             $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
+        } catch (RequestException $re) {
+            $this->logError('Could not get data from Remote Config API because clienteId is invalid', [
+                'current_cache' => $currentCache,
+                'error_message' => $re->getMessage(),
+                'path' => $path,
+                'timeout' => $timeout,
+            ]);
+            if ($re->hasResponse()) {
+                if ($re->getResponse()->getStatusCode() === 400) {
+                    throw new HttpException(404, "clienteId is invalid!");
+                }
+            }
         }
 
         return $currentCache;
