@@ -154,7 +154,7 @@ class RemoteConfig
                 'timeout' => $timeout,
             ]);
             if ($re->hasResponse()) {
-                if ($re->getResponse()->getStatusCode() === 400) {
+                if ($re->getResponse()->getStatusCode() === 404) {
                     throw new HttpException(404, "clienteId is invalid!");
                 }
             }
