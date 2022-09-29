@@ -147,16 +147,20 @@ class RemoteConfig
 
             $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
         } catch (RequestException $re) {
-            $this->logError('Could not get data from Remote Config API because clienteId is invalid', [
-                'current_cache' => $currentCache,
-                'error_message' => $re->getMessage(),
-                'path' => $path,
-                'timeout' => $timeout,
-            ]);
             if ($re->hasResponse()) {
-                if ($re->getResponse()->getStatusCode() === 404) {
-                    throw new HttpException(404, "clienteId is invalid!");
-                }
+                $this->logError('Could not get data from Remote Config API', [
+                    'current_cache' => $currentCache,
+                    'error_message' => $re->getMessage(),
+                    'path' => $path,
+                    'timeout' => $timeout,
+                ]);
+                
+                $exceptionMessage = $re->getMessage();
+
+                if ($re->getResponse()->getStatusCode() === 404)
+                    $exceptionMessage = "clienteId is invalid!";
+
+                throw new HttpException($re->getResponse()->getStatusCode(), $exceptionMessage);
             }
         }
 
