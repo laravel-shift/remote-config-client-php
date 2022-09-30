@@ -5,8 +5,10 @@ namespace Linx\RemoteConfigClient;
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Cache\Simple\FilesystemCache;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Psr\SimpleCache\CacheInterface;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Arr;
 
 class RemoteConfig
@@ -85,7 +87,6 @@ class RemoteConfig
 
         if ($hasCache) {
             $data = $cache->get($cacheKey);
-
             if (!$this->cacheFallback()->has($cacheKey)) {
                 $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
             }
@@ -138,6 +139,22 @@ class RemoteConfig
             }
 
             $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
+        } catch (RequestException $re) {
+            if ($re->hasResponse()) {
+                $this->logError('Could not get data from Remote Config API', [
+                    'current_cache' => $currentCache,
+                    'error_message' => $re->getMessage(),
+                    'path' => $path,
+                    'timeout' => $timeout,
+                ]);
+
+                $exceptionMessage = $re->getMessage();
+
+                if ($re->getResponse()->getStatusCode() === 404)
+                    $exceptionMessage = "clientId is invalid!";
+
+                throw new HttpException($re->getResponse()->getStatusCode(), $exceptionMessage);
+            }
         }
 
         return $currentCache;
