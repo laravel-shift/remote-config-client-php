@@ -158,7 +158,7 @@ class RemoteConfig
                 $exceptionMessage = $re->getMessage();
 
                 if ($re->getResponse()->getStatusCode() === 404)
-                    $exceptionMessage = "clienteId is invalid!";
+                    $exceptionMessage = "clientId is invalid!";
 
                 throw new HttpException($re->getResponse()->getStatusCode(), $exceptionMessage);
             }
