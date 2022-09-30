@@ -87,20 +87,13 @@ class RemoteConfig
 
         if ($hasCache) {
             $data = $cache->get($cacheKey);
-
             if (!$this->cacheFallback()->has($cacheKey)) {
                 $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
             }
         } else {
-
-            try {
-                $data = $this->httpGet($uri);
-
-                if ($canAcessRedis) {
-                    $cache->set($cacheKey, $data, $this->cacheLifeTime);
-                }
-            } catch (HttpException $th) {
-                throw $th;
+            $data = $this->httpGet($uri);
+            if ($canAcessRedis) {
+                $cache->set($cacheKey, $data, $this->cacheLifeTime);
             }
         }
 
@@ -154,7 +147,7 @@ class RemoteConfig
                     'path' => $path,
                     'timeout' => $timeout,
                 ]);
-                
+
                 $exceptionMessage = $re->getMessage();
 
                 if ($re->getResponse()->getStatusCode() === 404)
