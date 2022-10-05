@@ -68,35 +68,30 @@ class RemoteConfig
         $uri = $this->buildUri($this->application, $client, $this->environment);
         $cacheKey = $this->buildCacheKey($uri);
         $cache = $this->getCache();
-        $hasCache = false;
-        $canAcessRedis = false;
+        $usedRedis = true;
 
         try {
             if (method_exists($cache, 'tags')) {
                 $cache = $cache->tags($this->getCacheTags($client));
             }
-            $hasCache = $cache->has($cacheKey);
-            $canAcessRedis = true;
+            $data = $cache->get($cacheKey);
+            if (!$this->cacheFallback()->has($cacheKey) && null !== $data) {
+                $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
+            }
         } catch (\Exception $th) {
+            $usedRedis = false;
             $this->logError('Could not open cache from Redis', [
                 'client' => $client,
                 'error_message' => $th->getMessage(),
                 'uri' => $uri,
             ]);
         }
-
-        if ($hasCache) {
-            $data = $cache->get($cacheKey);
-            if (!$this->cacheFallback()->has($cacheKey)) {
-                $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
-            }
-        } else {
+        if (null === $data) {
             $data = $this->httpGet($uri);
-            if ($canAcessRedis) {
+            if ($usedRedis) {
                 $cache->set($cacheKey, $data, $this->cacheLifeTime);
             }
         }
-
         return Arr::get($data, $config, null);
     }
 
