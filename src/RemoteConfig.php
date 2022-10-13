@@ -4,7 +4,6 @@ namespace Linx\RemoteConfigClient;
 
 use GuzzleHttp\Client;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\Cache\Simple\FilesystemCache;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Psr\SimpleCache\CacheInterface;
 use GuzzleHttp\Exception\ConnectException;
@@ -17,8 +16,6 @@ class RemoteConfig
 
     const REQUEST_URI = '/api/v1/configs/%s/%s/%s';
 
-    const RC_CACHE_FALLBACK = 'RC_CACHE_FALLBACK';
-    const RC_CACHE_FALLBACK_TTL = 604800; //one week
     const CACHE_TTL = -1;
 
     private $host;
@@ -37,8 +34,6 @@ class RemoteConfig
 
     private $cache;
 
-    private $cacheFallback;
-
     /** @var string|null $loggerClass */
     private $loggerClass;
 
@@ -50,8 +45,6 @@ class RemoteConfig
         $this->application = $credentials['application'];
         $this->environment = $credentials['environment'];
         $this->cacheLifeTime = $credentials['cache-life-time'] ?? self::CACHE_TTL;
-        $this->cacheDirectory = $credentials['cache-directory'] ?? null;
-        $this->cacheFallbackDirectory = $credentials['cache-fallback-directory'] ?? null;
     }
 
     private function logError(string $message, array $data = [])
@@ -75,9 +68,6 @@ class RemoteConfig
                 $cache = $cache->tags($this->getCacheTags($client));
             }
             $data = $cache->get($cacheKey);
-            if (!$this->cacheFallback()->has($cacheKey) && null !== $data) {
-                $this->cacheFallback()->set($cacheKey, $data, self::RC_CACHE_FALLBACK_TTL);
-            }
         } catch (\Exception $th) {
             $usedRedis = false;
             $this->logError('Could not open cache from Redis', [
@@ -102,45 +92,31 @@ class RemoteConfig
 
     private function httpGet($path)
     {
-        $cache = $this->cacheFallback();
-        $cacheKey = $this->buildCacheKey($path);
-        $timeout = self::REQUEST_TIMEOUT;
-
-        $currentCache = $cache->get($cacheKey);
-
         try {
             $response = $this->getHttpClient()->request(
                 'GET',
                 $this->host . $path,
                 [
                     'auth' => [$this->username, $this->password],
-                    'connect_timeout' => $timeout,
-                    'read_timeout' => $timeout,
-                    'timeout' => $timeout,
+                    'connect_timeout' => self::REQUEST_TIMEOUT,
+                    'read_timeout' => self::REQUEST_TIMEOUT,
+                    'timeout' => self::REQUEST_TIMEOUT,
                 ]
             );
 
-            $currentCache = json_decode($response->getBody(), true);
-            $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
+            $data = json_decode($response->getBody(), true);
         } catch (ConnectException $e) {
             $this->logError('Could not get data from Remote Config API', [
-                'current_cache' => $currentCache,
                 'error_message' => $e->getMessage(),
-                'path' => $path,
-                'timeout' => $timeout,
+                'path' => $path
             ]);
-            if (empty($currentCache)) {
-                throw $e;
-            }
 
-            $cache->set($cacheKey, $currentCache, self::RC_CACHE_FALLBACK_TTL);
+            throw $e;
         } catch (RequestException $re) {
             if ($re->hasResponse()) {
                 $this->logError('Could not get data from Remote Config API', [
-                    'current_cache' => $currentCache,
                     'error_message' => $re->getMessage(),
-                    'path' => $path,
-                    'timeout' => $timeout,
+                    'path' => $path
                 ]);
 
                 $exceptionMessage = $re->getMessage();
@@ -152,20 +128,7 @@ class RemoteConfig
             }
         }
 
-        return $currentCache;
-    }
-
-    private function cacheFallback()
-    {
-        if (!empty($this->cacheFallback)) {
-            return $this->cacheFallback;
-        }
-
-        return $this->cacheFallback = new FilesystemCache(
-            self::RC_CACHE_FALLBACK,
-            self::RC_CACHE_FALLBACK_TTL,
-            $this->cacheFallbackDirectory
-        );
+        return $data;
     }
 
     public function getHttpClient()
@@ -181,13 +144,7 @@ class RemoteConfig
 
     public function getCache()
     {
-        if (!empty($this->cache)) {
-            return $this->cache;
-        }
-
-        $cache = new FilesystemCache('', $this->cacheLifeTime, $this->cacheDirectory);
-
-        return $this->cache = $cache;
+        return $this->cache;
     }
 
     public function setHttpClient(Client $httpClient)
@@ -212,8 +169,8 @@ class RemoteConfig
     {
         $uri = $this->buildUri($this->application, $client, $this->environment);
         $cacheKey = $this->buildCacheKey($uri);
-
         $cache = $this->getCache();
+
         if (method_exists($cache, 'tags')) {
             $cache = $cache->tags($this->getCacheTags($client));
         }
