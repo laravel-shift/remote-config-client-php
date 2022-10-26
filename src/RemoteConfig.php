@@ -76,7 +76,7 @@ class RemoteConfig
                 'uri' => $uri,
             ]);
         }
-        if (null === $data) {
+        if (!isset($data)) {
             $data = $this->httpGet($uri);
             if ($usedRedis) {
                 $cache->set($cacheKey, $data, $this->cacheLifeTime);
@@ -128,7 +128,7 @@ class RemoteConfig
             }
         }
 
-        return $data;
+        return $data ?? null;
     }
 
     public function getHttpClient()
